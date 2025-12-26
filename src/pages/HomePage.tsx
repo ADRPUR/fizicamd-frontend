@@ -22,9 +22,9 @@ export default function HomePage() {
 
   const heroStats = useMemo(
     () => [
-      { label: "Profesori activi", value: "45+" },
-      { label: "Resurse publicate", value: "120+" },
-      { label: "Ani de arhivă", value: "17" },
+      { label: "Profesori implicați", value: "Comunitate activă" },
+      { label: "Resurse publicate", value: "Conținut variat" },
+      { label: "Arhivă educațională", value: "Materiale verificate" },
     ],
     []
   );
