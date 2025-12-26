@@ -1,7 +1,7 @@
 import { Box, Button, Card, CardContent, CardMedia, Link, Stack, Typography } from "@mui/material";
 import type { ResourceBlock } from "../../types/resources";
 import { useI18n } from "../../i18n";
-import { absoluteMediaUrl } from "../../utils/media";
+import { resolveMediaUrl } from "../../utils/media";
 import TeX from "@matejmazur/react-katex";
 
 interface Props {
@@ -34,7 +34,7 @@ export default function ResourceContent({ blocks }: Props) {
               </Typography>
             );
           case "IMAGE": {
-            const media = absoluteMediaUrl(block.mediaUrl);
+            const media = resolveMediaUrl(block.mediaUrl, block.assetId);
             return (
               <Card key={idx} variant="outlined">
                 {media && (
@@ -49,7 +49,7 @@ export default function ResourceContent({ blocks }: Props) {
             );
           }
         case "PDF": {
-          const media = absoluteMediaUrl(block.mediaUrl);
+          const media = resolveMediaUrl(block.mediaUrl, block.assetId);
           return (
             <Box key={idx}>
               <Typography variant="subtitle2" gutterBottom>

@@ -28,9 +28,11 @@ import {
   fetchTeacherResourceDetail,
   updateResource as updateTeacherResource,
 } from "../api/resources";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import { absoluteMediaUrl } from "../utils/media";
+import { absoluteMediaUrl, resolveMediaUrl } from "../utils/media";
 import { useSearchParams } from "react-router-dom";
 import TeX from "@matejmazur/react-katex";
 import { addStyles, EditableMathField } from "react-mathquill";
@@ -69,6 +71,7 @@ export default function ResourceEditorPage() {
   const [savingResource, setSavingResource] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchResourceCategories()
@@ -218,6 +221,41 @@ export default function ResourceEditorPage() {
       next.splice(index, 1);
       return { ...prev, blocks: next };
     });
+  };
+
+  const handleMoveBlock = (from: number, to: number) => {
+    setResourceDraft((prev) => {
+      if (to < 0 || to >= prev.blocks.length || from === to) return prev;
+      const next = [...prev.blocks];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return { ...prev, blocks: next };
+    });
+  };
+
+  const handleDragStart = (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(index));
+    setDraggingIndex(index);
+  };
+
+  const handleDragOver = (_index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const fromRaw = event.dataTransfer.getData("text/plain");
+    const from = Number(fromRaw);
+    if (!Number.isNaN(from)) {
+      handleMoveBlock(from, index);
+    }
+    setDraggingIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingIndex(null);
   };
 
   const resetResourceForm = useCallback(
@@ -438,13 +476,43 @@ export default function ResourceEditorPage() {
               <Typography variant="subtitle1">{t("teacher.resourceFields.blocks")}</Typography>
               <Stack spacing={2}>
                 {resourceDraft.blocks.map((block, index) => (
-                  <Card key={`${block.type}-${index}`} variant="outlined">
+                  <Card
+                    key={`${block.type}-${index}`}
+                    variant="outlined"
+                    draggable
+                    onDragStart={handleDragStart(index)}
+                    onDragOver={handleDragOver(index)}
+                    onDrop={handleDrop(index)}
+                    onDragEnd={handleDragEnd}
+                    sx={{
+                      cursor: "grab",
+                      opacity: draggingIndex === index ? 0.7 : 1,
+                    }}
+                  >
                     <CardContent>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                         <Typography fontWeight={600}>{block.type}</Typography>
-                        <IconButton size="small" onClick={() => handleBlockDelete(index)}>
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveBlock(index, index - 1)}
+                            disabled={index === 0}
+                            aria-label="Mută sus"
+                          >
+                            <ArrowUpwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveBlock(index, index + 1)}
+                            disabled={index === resourceDraft.blocks.length - 1}
+                            aria-label="Mută jos"
+                          >
+                            <ArrowDownwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleBlockDelete(index)} aria-label="Șterge bloc">
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
                       </Stack>
                       {block.type === "TEXT" && (
                         <TextField
@@ -510,19 +578,19 @@ export default function ResourceEditorPage() {
                               onChange={(e) => handleBlockUpload(index, e.target.files?.[0])}
                             />
                           </Button>
-                          {block.mediaUrl && block.type === "IMAGE" && (
+                          {resolveMediaUrl(block.mediaUrl, block.assetId) && block.type === "IMAGE" && (
                             <Box
                               component="img"
-                              src={absoluteMediaUrl(block.mediaUrl)}
+                              src={resolveMediaUrl(block.mediaUrl, block.assetId)}
                               alt={block.caption ?? ""}
                               sx={{ maxWidth: 200, borderRadius: 2 }}
                             />
                           )}
-                          {block.mediaUrl && block.type === "PDF" && (
+                          {resolveMediaUrl(block.mediaUrl, block.assetId) && block.type === "PDF" && (
                             <Button
                               size="small"
                               component="a"
-                              href={absoluteMediaUrl(block.mediaUrl)}
+                              href={resolveMediaUrl(block.mediaUrl, block.assetId)}
                               target="_blank"
                               rel="noreferrer"
                             >
